@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Doe Sangue, Doe Vida</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Importação do Chart.js para o gráfico de impacto -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+
+/* =========================================================
+   TOKENS (Ajustados para layout mais claro e chamativo)
+   ========================================================= */
+:root {
+    --void: #0e1628;
+    --panel: #16223b;
+    --panel-2: #1e2d4a;
+    --line: rgba(255, 255, 255, 0.15);
+    --line-bright: rgba(0, 240, 212, 0.5);
+
+    --blood: #ff2a51;
+    --blood-hover: #ff0033;
+    --blood-dim: #8b152b;
+    --plasma: #00f0d4;
+    --plasma-dim: #058273;
+
+    --text: #ffffff;
+    --text-muted: #a6b7d6;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+
+    --radius: 6px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+    background-color: var(--void);
+    background-image:
+        linear-gradient(rgba(0, 240, 212, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 212, 0.05) 1px, transparent 1px);
+    background-size: 36px 36px;
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+}
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em; }
+
+a { color: inherit; }
+
+img { display: block; max-width: 100%; }
+
+:focus-visible {
+    outline: 2px solid var(--plasma);
+    outline-offset: 3px;
+}
+
+.envelope {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Reusable HUD frame: corners instead of generic card shadows */
+.hud {
+    position: relative;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.hud::before, .hud::after,
+.hud .corner-a, .hud .corner-b {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--plasma);
+    opacity: 0.9;
+}
+.hud::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.hud::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+.kicker {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--plasma);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.kicker::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    background: var(--plasma);
+    box-shadow: 0 0 10px var(--plasma);
+    border-radius: 50%;
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(14, 22, 40, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+}
+.nav .envelope {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+}
+.nav-brand svg { width: 22px; height: 22px; }
+.nav-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+.nav-links a { text-decoration: none; transition: color 0.2s ease; }
+.nav-links a:hover { color: var(--plasma); }
+.nav-links { display: none; }
+@media (min-width: 760px) { .nav-links { display: flex; } }
+
+/* =========================================================
+   HERO
+   ========================================================= */
+.hero {
+    position: relative;
+    padding: 72px 0 96px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+}
+.hero-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-items: center;
+}
+@media (min-width: 900px) {
+    .hero-grid { grid-template-columns: 1.1fr 0.9fr; }
+}
+.hero h1 {
+    font-size: clamp(36px, 5.5vw, 58px);
+    line-height: 1.08;
+    margin-bottom: 22px;
+}
+.hero h1 .accent { color: var(--blood); text-shadow: 0 0 15px rgba(255, 42, 81, 0.4); }
+.hero p.lede {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 46ch;
+    margin-bottom: 34px;
+}
+.hero-stats {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-top: 40px;
+}
+.hero-stats .stat-num {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--plasma);
+    text-shadow: 0 0 10px rgba(0, 240, 212, 0.3);
+}
+.hero-stats .stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--blood);
+    color: #fff;
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    padding: 15px 28px;
+    border: none;
+    cursor: pointer;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 20px rgba(255, 42, 81, 0.4);
+}
+.btn:hover { background: var(--blood-hover); transform: translateY(-2px); box-shadow: 0 6px 25px rgba(255, 42, 81, 0.6); }
+.btn-ghost {
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--text);
+    box-shadow: none;
+}
+.btn-ghost:hover { border-color: var(--plasma); color: var(--plasma); box-shadow: 0 0 15px rgba(0, 240, 212, 0.3); }
+
+.hero-media {
+    position: relative;
+    border: 1px solid var(--line);
+}
+.hero-media img {
+    width: 100%;
+    height: 340px;
+    object-fit: cover;
+    filter: saturate(1.1) contrast(1.05);
+}
+.hero-media::before, .hero-media::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--blood);
+}
+.hero-media::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.hero-media::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+.hero-media figcaption {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 10px 4px 0;
+}
+
+/* =========================================================
+   SECTION SHELL
+   ========================================================= */
+section { padding: 88px 0; border-bottom: 1px solid var(--line); }
+.section-head { max-width: 65ch; margin-bottom: 48px; }
+.section-head h2 { font-size: clamp(28px, 3.6vw, 40px); margin-bottom: 14px; }
+.section-head p { color: var(--text-muted); font-size: 17px; }
+
+/* =========================================================
+   GRÁFICO - IMPACTO DA FALTA DE DOAÇÃO (NOVO)
+   ========================================================= */
+.grafico-section {
+    background: var(--panel-2);
+}
+.grafico-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    align-items: center;
+}
+@media (min-width: 900px) {
+    .grafico-layout { grid-template-columns: 1fr 1fr; }
+}
+.chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+.grafico-info h3 {
+    font-size: 22px;
+    color: var(--plasma);
+    margin-bottom: 16px;
+}
+.grafico-info p {
+    color: var(--text-muted);
+    font-size: 15.5px;
+    margin-bottom: 20px;
+}
+.alert-box {
+    background: rgba(255, 42, 81, 0.1);
+    border-left: 4px solid var(--blood);
+    padding: 16px;
+    border-radius: var(--radius);
+    font-size: 14.5px;
+    color: var(--text);
+}
+
+/* =========================================================
+   IMPORTÂNCIA
+   ========================================================= */
+.importancia-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+}
+@media (min-width: 860px) {
+    .importancia-grid { grid-template-columns: 1fr 1fr; align-items: stretch; }
+}
+.importancia-media {
+    position: relative;
+    min-height: 280px;
+}
+.importancia-media img { width: 100%; height: 100%; object-fit: cover; min-height: 280px; }
+
+.fact-list { list-style: none; display: flex; flex-direction: column; gap: 22px; }
+.fact-list li { display: flex; gap: 16px; }
+.fact-num {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--blood);
+    min-width: 46px;
+}
+.fact-list h3 { font-size: 18px; margin-bottom: 4px; }
+.fact-list p { color: var(--text-muted); font-size: 15px; }
+
+/* =========================================================
+   QUEM PODE / NÃO PODE DOAR
+   ========================================================= */
+.elegibilidade {
+    background: var(--panel);
+}
+.elig-media {
+    margin-bottom: 44px;
+    position: relative;
+}
+.elig-media img { width: 100%; height: 300px; object-fit: cover; object-position: center 30%; }
+.elig-media figcaption { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+.elig-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+@media (min-width: 820px) {
+    .elig-grid { grid-template-columns: 1fr 1fr; }
+}
+.elig-panel {
+    background: var(--panel-2);
+    padding: 30px 28px;
+}
+.elig-panel.pode { border-left: 3px solid var(--plasma); }
+.elig-panel.nao { border-left: 3px solid var(--blood); }
+.elig-panel h3 {
+    font-size: 18px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.elig-panel ul { list-style: none; display: flex; flex-direction: column; gap: 13px; }
+.elig-panel li {
+    font-size: 15px;
+    color: var(--text-muted);
+    padding-left: 26px;
+    position: relative;
+}
+.elig-panel.pode li::before {
+    content: "✓";
+    position: absolute; left: 0; color: var(--plasma); font-weight: 700;
+}
+.elig-panel.nao li::before {
+    content: "✕";
+    position: absolute; left: 0; color: var(--blood); font-weight: 700;
+}
+
+/* =========================================================
+   TIPOS SANGUÍNEOS
+   ========================================================= */
+.tipos-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+}
+@media (min-width: 900px) {
+    .tipos-layout { grid-template-columns: 1fr 1.15fr; align-items: center; }
+}
+.tipos-media {
+    background: #ffffff;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+.tipos-media img { width: 100%; height: auto; }
+.tipos-media figcaption { color: var(--text-muted); font-size: 12px; padding-top: 10px; }
+
+.tipos-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+.tipo-badge {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    text-align: center;
+    padding: 18px 6px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.tipo-badge:hover { border-color: var(--plasma); transform: translateY(-2px); }
+.tipo-badge .sigla {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--blood);
+}
+.tipo-badge .papel {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.tipos-nota {
+    margin-top: 20px;
+    font-size: 14.5px;
+    color: var(--text-muted);
+}
+.tipos-nota strong { color: var(--plasma); font-weight: 600; }
+
+/* =========================================================
+   HISTÓRIA — linha do tempo
+   ========================================================= */
+.historia { background: var(--panel); }
+.historia-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 44px;
+}
+@media (min-width: 900px) {
+    .historia-layout { grid-template-columns: 0.85fr 1.15fr; }
+}
+.historia-media img { width: 100%; height: 360px; object-fit: cover; filter: grayscale(0.2) sepia(0.15); }
+.historia-media figcaption { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+.timeline { position: relative; padding-left: 30px; }
+.timeline::before {
+    content: "";
+    position: absolute;
+    left: 5px; top: 6px; bottom: 6px;
+    width: 2px;
+    background: linear-gradient(var(--blood), var(--plasma));
+}
+.timeline-item { position: relative; margin-bottom: 30px; }
+.timeline-item:last-child { margin-bottom: 0; }
+.timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -30px; top: 5px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--void);
+    border: 2px solid var(--plasma);
+}
+.timeline-year {
+    font-family: var(--font-display);
+    color: var(--plasma);
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+.timeline-item h4 { font-size: 17px; margin-bottom: 4px; }
+.timeline-item p { font-size: 14.5px; color: var(--text-muted); }
+
+/* =========================================================
+   CTA / FORM
+   ========================================================= */
+.cta-final { border-bottom: none; padding-bottom: 100px; }
+.cta-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+}
+@media (min-width: 900px) {
+    .cta-grid { grid-template-columns: 1fr 1fr; }
+}
+.cta-copy h2 { font-size: clamp(28px, 3.6vw, 40px); margin-bottom: 16px; }
+.cta-copy p { color: var(--text-muted); margin-bottom: 24px; max-width: 44ch; }
+
+.form-panel { padding: 32px; }
+.form-row { margin-bottom: 18px; }
+.form-row label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 7px;
+}
+.form-row input, .form-row select {
+    width: 100%;
+    background: var(--void);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    border-radius: var(--radius);
+}
+.form-row input:focus, .form-row select:focus {
+    border-color: var(--plasma);
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 240, 212, 0.2);
+}
+.form-panel button { width: 100%; justify-content: center; margin-top: 6px; }
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+footer {
+    padding: 36px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-top: 1px solid var(--line);
+}
+footer .drop { color: var(--blood); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+    <div class="envelope">
+        <div class="nav-brand">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z" fill="#ff2a51" stroke="#ff2a51" stroke-width="1.6"/>
+            </svg>
+            VidaSangue
+        </div>
+        <ul class="nav-links">
+            <li><a href="#impacto">Impacto Real</a></li>
+            <li><a href="#importancia">Importância</a></li>
+            <li><a href="#elegibilidade">Quem pode doar</a></li>
+            <li><a href="#tipos">Tipos sanguíneos</a></li>
+            <li><a href="#historia">História</a></li>
+        </ul>
+        <a href="#doar" class="btn btn-ghost" style="padding:10px 20px; font-size:13px;">Quero doar</a>
+    </div>
+</nav>
+
+<header class="hero">
+    <div class="envelope hero-grid">
+        <div>
+            <span class="kicker">Doação de sangue</span>
+            <h1>Uma bolsa de sangue.<br><span class="accent">Salva</span> até quatro vidas.</h1>
+            <p class="lede">O sangue não pode ser fabricado em laboratório ele só existe porque alguém decide doar. Entenda por que isso importa, quem pode doar e como o seu tipo sanguíneo se encaixa nessa cadeia.</p>
+            <a href="#doar" class="btn">Quero agendar minha doação</a>
+
+            <div class="hero-stats">
+                <div>
+                    <div class="stat-num">4</div>
+                    <div class="stat-label">vidas por doação</div>
+                </div>
+                <div>
+                    <div class="stat-num">56</div>
+                    <div class="stat-label">dias entre doações (homens)</div>
+                </div>
+                <div>
+                    <div class="stat-num">O−</div>
+                    <div class="stat-label">doador universal</div>
+                </div>
+            </div>
+        </div>
+
+        <figure class="hero-media hud">
+            <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Bloodbags.jpg" alt="Bolsas de sangue coletadas durante doação" loading="lazy" />
+            <figcaption>Bolsas de sangue prontas para triagem e armazenamento.</figcaption>
+        </figure>
+    </div>
+</header>
+
+<!-- SEÇÃO DE IMPACTO E GRÁFICO (NOVA) -->
+<section id="impacto" class="grafico-section">
+    <div class="envelope">
+        <div class="section-head">
+            <span class="kicker">Estatísticas Críticas</span>
+            <h2>O Impacto do Estoque Baixo</h2>
+            <p>Quando a taxa de doação cai nos hemocentros, o impacto é direto na vida dos pacientes internados e nas emergências hospitalares.</p>
+        </div>
+
+        <div class="grafico-layout">
+            <div class="chart-container hud" style="padding: 24px;">
+                <canvas id="impactoChart"></canvas>
+            </div>
+
+            <div class="grafico-info">
+                <h3>O que acontece quando os estoques esgotam?</h3>
+                <p>A falta de sangue força adiamentos de cirurgias essenciais, aumenta o tempo de internação e agrava quadros de pacientes em UTIs ou tratamentos oncológicos.</p>
+                <div class="alert-box">
+                    <strong>Atenção:</strong> Cerca de <strong>45% das complicações graves</strong> em emergências ocorrem pelo atraso na disponibilidade de bolsas de sangue compatíveis.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="importancia">
+    <div class="envelope">
+        <div class="section-head">
+            <span class="kicker">Por que importa</span>
+            <h2>Sangue não se fabrica. Só se doa.</h2>
+            <p>Diferente de outros insumos médicos, não existe substituto sintético para o sangue humano. Toda transfusão depende de alguém que doou antes.</p>
+        </div>
+
+        <div class="importancia-grid">
+            <figure class="importancia-media hud">
+                <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Blood_donation_%28test_tubes%29.JPG" alt="Amostras de sangue coletadas em tubos de ensaio para exames" loading="lazy" />
+            </figure>
+
+            <ul class="fact-list">
+                <li>
+                    <span class="fact-num">01</span>
+                    <div>
+                        <h3>Validade curta</h3>
+                        <p>As hemácias duram cerca de 42 dias armazenadas; plaquetas, poucos dias. Sem novas doações, os estoques dos hemocentros se esgotam rápido.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="fact-num">02</span>
+                    <div>
+                        <h3>Uma doação, vários usos</h3>
+                        <p>Cada bolsa é separada em componentes — hemácias, plasma e plaquetas — que podem atender pacientes diferentes ao mesmo tempo.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="fact-num">03</span>
+                    <div>
+                        <h3>Demanda constante</h3>
+                        <p>Cirurgias, partos de risco, acidentes e tratamentos oncológicos dependem de sangue disponível todos os dias do ano, não só em campanhas.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="fact-num">04</span>
+                    <div>
+                        <h3>Gesto rápido e seguro</h3>
+                        <p>Todo material usado é descartável e esterilizado. A coleta em si leva entre 8 e 12 minutos.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section id="elegibilidade" class="elegibilidade">
+    <div class="envelope">
+        <div class="section-head">
+            <span class="kicker">Requisitos</span>
+            <h2>Quem pode e quem não pode doar</h2>
+            <p>As regras existem para proteger tanto o doador quanto quem vai receber o sangue. Consulte sempre o hemocentro local para confirmar seu caso.</p>
+        </div>
+
+        <figure class="elig-media hud">
+            <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Blood_Donation_12-07-06_1.JPG" alt="Doador de sangue durante a coleta, com agulha inserida no braço" loading="lazy" />
+            <figcaption>Coleta em andamento em um banco de sangue.</figcaption>
+        </figure>
+
+        <div class="elig-grid">
+            <div class="elig-panel pode hud">
+                <h3>Pode doar</h3>
+                <ul>
+                    <li>Ter entre 16 e 69 anos (menores de 18 precisam de autorização dos responsáveis)</li>
+                    <li>Pesar no mínimo 50 kg</li>
+                    <li>Estar bem de saúde e alimentado no dia da doação</li>
+                    <li>Apresentar documento oficial com foto</li>
+                    <li>Respeitar o intervalo mínimo entre doações: 60 dias (homens) e 90 dias (mulheres)</li>
+                </ul>
+            </div>
+
+            <div class="elig-panel nao hud">
+                <h3>Impedimentos comuns</h3>
+                <ul>
+                    <li>Gripe, febre ou infecção nos últimos dias</li>
+                    <li>Tatuagem, piercing ou procedimento estético recente (geralmente até 12 meses)</li>
+                    <li>Gravidez e período de amamentação</li>
+                    <li>Consumo de álcool nas últimas 12 horas</li>
+                    <li>Algumas condições de saúde crônicas ou uso de determinados medicamentos</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="tipos">
+    <div class="envelope">
+        <div class="section-head">
+            <span class="kicker">Compatibilidade</span>
+            <h2>Os oito tipos sanguíneos</h2>
+            <p>A combinação do sistema ABO com o fator Rh define quem pode doar para quem. Saber o seu tipo ajuda a entender seu papel nessa rede.</p>
+        </div>
+
+        <div class="tipos-layout">
+            <figure class="tipos-media">
+                <img src="https://commons.wikimedia.org/wiki/Special:FilePath/ABO_blood_group_diagram.svg" alt="Diagrama do sistema de grupos sanguíneos ABO, mostrando antígenos e anticorpos de cada tipo" loading="lazy" />
+                <figcaption>Sistema ABO: cada tipo carrega antígenos e anticorpos diferentes.</figcaption>
+            </figure>
+
+            <div>
+                <div class="tipos-grid">
+                    <div class="tipo-badge"><div class="sigla">O−</div><div class="papel">doador universal</div></div>
+                    <div class="tipo-badge"><div class="sigla">O+</div><div class="papel">tipo mais comum</div></div>
+                    <div class="tipo-badge"><div class="sigla">A−</div><div class="papel">doa para A, AB</div></div>
+                    <div class="tipo-badge"><div class="sigla">A+</div><div class="papel">doa para A+, AB+</div></div>
+                    <div class="tipo-badge"><div class="sigla">B−</div><div class="papel">doa para B, AB</div></div>
+                    <div class="tipo-badge"><div class="sigla">B+</div><div class="papel">doa para B+, AB+</div></div>
+                    <div class="tipo-badge"><div class="sigla">AB−</div><div class="papel">receptor raro</div></div>
+                    <div class="tipo-badge"><div class="sigla">AB+</div><div class="papel">receptor universal</div></div>
+                </div>
+                <p class="tipos-nota"><strong>O−</strong> pode doar para qualquer tipo sanguíneo, e por isso é essencial em emergências. Já quem tem <strong>AB+</strong> pode receber de qualquer doador.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="historia" class="historia">
+    <div class="envelope">
+        <div class="section-head">
+            <span class="kicker">Um pouco de história</span>
+            <h2>Do experimento arriscado à rotina que salva vidas</h2>
+            <p>A transfusão de sangue como conhecemos hoje levou séculos para se tornar segura.</p>
+        </div>
+
+        <div class="historia-layout">
+            <figure class="historia-media hud">
+                <img src="https://commons.wikimedia.org/wiki/Special:FilePath/First_successful_Human_Blood_Transfusion.jpg" alt="Ilustração histórica representando uma das primeiras transfusões de sangue" loading="lazy" />
+                <figcaption>Registro histórico de uma das primeiras transfusões documentadas.</figcaption>
+            </figure>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-year">1667</div>
+                    <h4>A primeira transfusão documentada</h4>
+                    <p>O médico francês Jean-Baptiste Denys transfundiu sangue de cordeiro em um jovem de 15 anos. O paciente sobreviveu, mas tentativas seguintes mostraram os riscos de misturar sangue de espécies diferentes.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">1818</div>
+                    <h4>Primeira transfusão humano-humano</h4>
+                    <p>O obstetra britânico James Blundell realizou a primeira transfusão bem-sucedida de sangue humano para tratar uma hemorragia pós-parto.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">1901</div>
+                    <h4>Descoberta dos tipos sanguíneos</h4>
+                    <p>Karl Landsteiner identificou os grupos A, B e O, explicando por que algumas transfusões funcionavam e outras eram fatais. A descoberta lhe rendeu o Prêmio Nobel.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">1914–1918</div>
+                    <h4>Armazenamento se torna possível</h4>
+                    <p>O uso de citrato de sódio como anticoagulante permitiu guardar sangue por dias, abrindo caminho para os primeiros bancos de sangue durante a Primeira Guerra Mundial.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">Hoje</div>
+                    <h4>Uma rede global de doadores</h4>
+                    <p>Triagem rigorosa, testes sorológicos e logística de hemocentros tornaram a doação um dos gestos mais seguros e eficazes da medicina moderna.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="doar" class="cta-final">
+    <div class="envelope cta-grid">
+        <div class="cta-copy">
+            <span class="kicker">Próximo passo</span>
+            <h2>Marque sua doação</h2>
+            <p>Preencha seus dados e entraremos em contato para confirmar o hemocentro mais próximo e o melhor horário para você.</p>
+            <p style="font-size:14px;">Leva menos de uma hora. O impacto dura muito mais.</p>
+        </div>
+
+        <form class="form-panel hud" action="#" method="GET">
+            <div class="form-row">
+                <label for="nome">Seu nome</label>
+                <input id="nome" type="text" placeholder="Digite seu nome completo" required />
+            </div>
+            <div class="form-row">
+                <label for="tipo-sanguineo">Tipo sanguíneo (se souber)</label>
+                <select id="tipo-sanguineo">
+                    <option>Não sei / vou descobrir na triagem</option>
+                    <option>O−</option>
+                    <option>O+</option>
+                    <option>A−</option>
+                    <option>A+</option>
+                    <option>B−</option>
+                    <option>B+</option>
+                    <option>AB−</option>
+                    <option>AB+</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="cidade">Cidade</label>
+                <input id="cidade" type="text" placeholder="Ex: São Paulo, SP" required />
+            </div>
+            <div class="form-row">
+                <label for="preferencia">Preferência de horário</label>
+                <select id="preferencia">
+                    <option>Manhã</option>
+                    <option>Tarde</option>
+                    <option>Fim de semana</option>
+                </select>
+            </div>
+            <button type="submit" class="btn">Enviar solicitação</button>
+        </form>
+    </div>
+</section>
+
+<footer>
+    <div class="envelope">
+        <span class="drop">●</span> Doar sangue é doar tempo de vida. Consulte sempre o hemocentro da sua região para confirmar os critérios atuais.
+    </div>
+</footer>
+
+<!-- SCRIPT DO GRÁFICO DA SEÇÃO DE IMPACTO -->
+<script>
+const ctx = document.getElementById('impactoChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: [
+            'Piora / Complicações Graves',
+            'Cirurgias e Procedimentos Adiados',
+            'Atendimento Realizado no Prazo'
+        ],
+        datasets: [{
+            data: [45, 30, 25],
+            backgroundColor: [
+                '#ff2a51',
+                '#ff9900',
+                '#00f0d4'
+            ],
+            borderColor: '#16223b',
+            borderWidth: 3
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    color: '#eef2fb',
+                    font: {
+                        family: 'Inter',
+                        size: 12
+                    }
+                }
+            },
+            title: {
+                display: true,
+                text: 'Impacto da Falta de Doação no Atendimento (%)',
+                color: '#ffffff',
+                font: {
+                    family: 'Space Grotesk',
+                    size: 16,
+                    weight: 'bold'
+                }
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
